@@ -219,7 +219,7 @@ st.sidebar.markdown("---")
 
 page = st.sidebar.radio(
     "Navigate",
-    [" Home", " Dashboard", " Get Recommendation", " Research Results"]
+    ["Home", "Dashboard", "Get Recommendation", "Research Results"]
 )
 
 st.sidebar.markdown("---")
