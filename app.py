@@ -73,51 +73,23 @@ def load_models():
  
 model, scaler, le = load_models()
  
-# STUDY RESOURCES
-study_resources = {
-    'At-Risk': [
-        {
-            "title": "How to Create an Effective Study Timetable",
-            "type": "Article",
-            "link": "https://www.mindtools.com/pages/article/newHTE_05.htm",
-            "desc": "Learn how to plan your study schedule effectively"
-        },
-        {
-            "title": "Time Management Skills for Students",
-            "type": "Video",
-            "link": "https://www.youtube.com/watch?v=iDbdXTMnOmE",
-            "desc": "Master time management as a student"
-        },
-    ],
-    'Good': [
-        {
-            "title": "Advanced Exam Preparation Strategies",
-            "type": "Article",
-            "link": "https://www.educationcorner.com/exam-preparation-strategies.html",
-            "desc": "Strategies to prepare effectively for exams"
-        },
-        {
-            "title": "How to Improve Assignment Quality",
-            "type": "Guide",
-            "link": "https://www.skillsyouneed.com/learn/assignment-writing.html",
-            "desc": "Tips for writing better assignments"
-        },
-    ],
-    'Excellent': [
-        {
-            "title": "Academic Writing and Research Skills",
-            "type": "Article",
-            "link": "https://www.skillsyouneed.com/learn/academic-writing.html",
-            "desc": "Improve your academic writing skills"
-        },
-        {
-            "title": "How to Achieve Distinction Level Performance",
-            "type": "Guide",
-            "link": "https://www.mindtools.com/pages/article/newISS_91.htm",
-            "desc": "Tips for achieving the highest grades"
-        },
-    ]
-}
+# LOAD RESOURCES FROM CSV
+@st.cache_data
+def load_resources():
+    try:
+        resources_df = pd.read_csv("resources.csv")
+        return resources_df
+    except Exception as e:
+        st.error(f"Resources loading error: {e}")
+        return None
+ 
+resources_df = load_resources()
+ 
+def get_resources_for_category(category):
+    if resources_df is None:
+        return []
+    filtered = resources_df[resources_df['category'] == category]
+    return filtered.to_dict('records')
  
 # ALL FUNCTIONS
 def get_cluster_label(avg_score, engagement_ratio, days_active):
@@ -589,7 +561,7 @@ elif page == "Get Recommendation":
             for i, step in enumerate(result['pathway'], 1):
                 st.info(f"**Step {i}:** {step}")
  
-            # STUDY RESOURCES SECTION
+            # STUDY RESOURCES SECTION - LOADED FROM CSV
             st.markdown("---")
             st.subheader("Recommended Study Resources")
  
@@ -600,15 +572,21 @@ elif page == "Get Recommendation":
             else:
                 st.error("Based on your At-Risk status, here are essential resources to help you recover academically:")
  
-            resources_to_show = study_resources[category]
-            for i, resource in enumerate(resources_to_show, 1):
-                with st.expander(f"Resource {i}: {resource['title']} - {resource['type']}"):
-                    col1, col2 = st.columns([3, 1])
-                    with col1:
-                        st.write(f"**Description:** {resource['desc']}")
-                        st.write(f"**Type:** {resource['type']}")
-                    with col2:
-                        st.markdown(f"[Open Resource]({resource['link']})")
+            category_resources = get_resources_for_category(category)
+ 
+            if category_resources:
+                for i, resource in enumerate(category_resources, 1):
+                    with st.expander(f"Resource {i}: {resource['title']} - {resource['type']}"):
+                        col1, col2 = st.columns([3, 1])
+                        with col1:
+                            st.write(f"**Description:** {resource['description']}")
+                            st.write(f"**Type:** {resource['type']}")
+                            st.write(f"**Difficulty:** {resource['difficulty']}")
+                            st.write(f"**Why this resource:** {resource['reason']}")
+                        with col2:
+                            st.markdown(f"[Open Resource]({resource['link']})")
+            else:
+                st.warning("Resources not available. Please check resources.csv file.")
  
             st.markdown("---")
             st.success("Good luck with your studies!")
@@ -645,6 +623,7 @@ elif page == "Research Results":
         - Students Evaluated: 500
         - Recommendation Accuracy: 92.20%
         - Performance Classes: 3
+        - Study Resources: 30 curated resources
         - Max Pathway Steps: 8
         """)
         st.markdown("""
@@ -655,6 +634,26 @@ elif page == "Research Results":
         - Learning pathways created
         - System evaluated and validated
         """)
+ 
+    st.markdown("---")
+    st.subheader("Study Resources Overview")
+    if resources_df is not None:
+        st.write(f"Total Resources: {len(resources_df)}")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            at_risk_count = len(resources_df[resources_df['category'] == 'At-Risk'])
+            st.metric("At-Risk Resources", at_risk_count, "Basic Level")
+        with col2:
+            good_count = len(resources_df[resources_df['category'] == 'Good'])
+            st.metric("Good Resources", good_count, "Intermediate Level")
+        with col3:
+            excellent_count = len(resources_df[resources_df['category'] == 'Excellent'])
+            st.metric("Excellent Resources", excellent_count, "Advanced Level")
+ 
+        st.markdown("---")
+        st.subheader("Full Resource Dataset")
+        st.dataframe(resources_df[['resource_id', 'title', 'type', 'category', 'difficulty', 'reason']],
+                     use_container_width=True)
  
     st.markdown("---")
     st.subheader("Detailed Class Performance")
